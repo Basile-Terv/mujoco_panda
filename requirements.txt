@@ -1,0 +1,7 @@
+mujoco-py<2.2,>=2.1
+torch
+torchvision
+numpy
+numpy-quaternion
+scipy
+matplotlib

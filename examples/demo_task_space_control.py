@@ -7,6 +7,9 @@ import numpy as np
 from mujoco_panda import PandaArm
 from mujoco_panda.utils.tf import quatdiff_in_euler
 from mujoco_panda.utils.viewer_utils import render_frame
+import matplotlib.pyplot as plt
+import pathlib
+import imageio
 
 """
 Simplified demo of task-space control using joint torque actuation.
@@ -70,11 +73,29 @@ def controller_thread(ctrl_rate):
             if sleep_time_c > 0.0:
                 time.sleep(sleep_time_c)
 
+MODEL_PATH = os.environ["MJ_PANDA_PATH"] + "/mujoco_panda/models/"
+FILE_NAME = pathlib.Path(__file__).stem
+OUTPUT_BASE_PATH = pathlib.Path(__file__).parent.parent.resolve() / "local" / "plots" / FILE_NAME
 
 if __name__ == "__main__":
+    # p = PandaArm.withTorqueActuators(render=True, compensate_gravity=True)
+    p = PandaArm.fullRobotWithPositionActuators(render=False, compensate_gravity=True)
+    # p = PandaArm(
+    #     # model_path=MODEL_PATH + "panda_block_table.xml",
+    #     model_path=MODEL_PATH + "franka_panda_pos.xml",
+    #     render=False,
+    #     compensate_gravity=False,
+    #     smooth_ft_sensor=True,
+    # )
 
-    p = PandaArm.withTorqueActuators(render=True, compensate_gravity=True)
+    image = p._sim.render(500, 500)
 
+    image = image[::-1, :, :]  # flip image vertically
+
+    # save image to file
+    plt.imsave(OUTPUT_BASE_PATH/"init_state.png", image)
+
+    breakpoint()
     ctrl_rate = 1/p.model.opt.timestep
 
     render_rate = 100
@@ -97,6 +118,8 @@ if __name__ == "__main__":
 
     now_r = time.time()
     i = 0
+    breakpoint()
+    frames = []
     while i < len(target_z_traj):
         z_target = target_z_traj[i]
 
@@ -106,6 +129,7 @@ if __name__ == "__main__":
         if elapsed_r >= 0.1:
             i += 1
             now_r = time.time()
+        breakpoint()
         render_frame(p.viewer, robot_pos, robot_ori)
         render_frame(p.viewer, target_pos, original_ori, alpha=0.2)
 

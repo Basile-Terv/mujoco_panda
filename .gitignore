@@ -8,3 +8,4 @@ oldmodels/
 MUJOCO_LOG.TXT
 
 tests/
+local/
