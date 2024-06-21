@@ -561,4 +561,5 @@ class MujocoRobot(object):
         asynchronous simulation.
         """
         if self._viewer is not None:
+            breakpoint()
             self._viewer.render()

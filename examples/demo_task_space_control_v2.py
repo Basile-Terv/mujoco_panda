@@ -10,6 +10,7 @@ from mujoco_panda.utils.viewer_utils import render_frame
 import matplotlib.pyplot as plt
 import pathlib
 import imageio
+import torch
 
 """
 Simplified demo of task-space control using joint torque actuation.
@@ -25,7 +26,37 @@ P_ori = 200.
 # damping gains
 D_pos = 2.*np.sqrt(P_pos)
 D_ori = 1.
-# -----------------------------------------
+# ----------------------Video Utils-------------------
+def make_video(images, fps, output_path):
+    make_video_mp4(images, fps, output_path + ".mp4")
+    make_video_gif(images, fps, output_path + ".gif")
+
+
+def make_video_mp4(images, fps, output_path):
+    writer = imageio.get_writer(output_path, fps=fps, codec="libx264")
+
+    for img in images:
+        img = img[-1].numpy() if isinstance(img, torch.Tensor) else img
+        # img = img.transpose(1, 2, 0)
+        img = ((img - img.min()) / (img.max() - img.min()) * 255).astype(np.uint8)
+        writer.append_data(img)
+
+    writer.close()
+    print(f"Video saved to {output_path}")
+
+
+def make_video_gif(images, fps, output_path):
+    writer = imageio.get_writer(output_path, fps=fps, format="GIF")
+
+    for img in images:
+        img = img[-1].numpy() if isinstance(img, torch.Tensor) else img
+        # img = img.transpose(1, 2, 0)
+        img = ((img - img.min()) / (img.max() - img.min()) * 255).astype(np.uint8)
+        writer.append_data(img)
+
+    writer.close()
+    print(f"GIF saved to {output_path}")
+# --------------------------------------------------------------------
 
 
 def compute_ts_force(curr_pos, curr_ori, goal_pos, goal_ori, curr_vel, curr_omg):
@@ -87,17 +118,11 @@ if __name__ == "__main__":
     #     compensate_gravity=False,
     #     smooth_ft_sensor=True,
     # )
-
-    image = p._sim.render(500, 500)
-
+    image = p._sim.render(224, 224)
     image = image[::-1, :, :]  # flip image vertically
-
-    # save image to file
     plt.imsave(OUTPUT_BASE_PATH/"init_state.png", image)
 
-    breakpoint()
     ctrl_rate = 1/p.model.opt.timestep
-
     render_rate = 100
 
     p.set_neutral_pose()
@@ -118,7 +143,6 @@ if __name__ == "__main__":
 
     now_r = time.time()
     i = 0
-    breakpoint()
     frames = []
     while i < len(target_z_traj):
         z_target = target_z_traj[i]
@@ -129,19 +153,23 @@ if __name__ == "__main__":
         if elapsed_r >= 0.1:
             i += 1
             now_r = time.time()
-        breakpoint()
-        render_frame(p.viewer, robot_pos, robot_ori)
-        render_frame(p.viewer, target_pos, original_ori, alpha=0.2)
+        
+        frame = p._sim.render(224, 224)[::-1, :, :]  # flip image vertically
 
-        p.render()
-
+        frames.append(frame)
+        # render_frame(p.viewer, robot_pos, robot_ori)
+        # render_frame(p.viewer, target_pos, original_ori, alpha=0.2)
+        # p.render()
+        # Save video
+    output_path = str(OUTPUT_BASE_PATH / "simulation_video")
+    make_video(frames, fps=30, output_path=output_path)
     print("Done controlling. Press Ctrl+C to quit.")
 
-    while True:
-        robot_pos, robot_ori = p.ee_pose()
-        render_frame(p.viewer, robot_pos, robot_ori)
-        render_frame(p.viewer, target_pos, original_ori, alpha=0.2)
-        p.render()
+    # while True:
+    #     robot_pos, robot_ori = p.ee_pose()
+    #     render_frame(p.viewer, robot_pos, robot_ori)
+    #     render_frame(p.viewer, target_pos, original_ori, alpha=0.2)
+    #     p.render()
 
     run_controller = False
     ctrl_thread.join()
